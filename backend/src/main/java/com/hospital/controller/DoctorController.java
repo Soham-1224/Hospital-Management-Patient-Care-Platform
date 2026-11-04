@@ -1,9 +1,11 @@
 package com.hospital.controller;
 
 import com.hospital.dto.DoctorResponseDTO;
+import com.hospital.dto.DoctorUpdateRequestDTO;
 import com.hospital.entity.Doctor;
 import com.hospital.service.DoctorService;
 
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -62,5 +64,18 @@ public class DoctorController {
                         .toList();
 
         return ResponseEntity.ok(doctors);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<DoctorResponseDTO> updateDoctor(
+            @PathVariable Long id,
+            @Valid @RequestBody DoctorUpdateRequestDTO request) {
+
+        Doctor updatedDoctor =
+                doctorService.updateDoctor(id, request);
+
+        return ResponseEntity.ok(
+                DoctorResponseDTO.fromEntity(updatedDoctor)
+        );
     }
 }

@@ -1,5 +1,6 @@
 package com.hospital.service;
 
+import com.hospital.dto.DoctorUpdateRequestDTO;
 import com.hospital.entity.Doctor;
 import com.hospital.repository.DoctorRepository;
 import com.hospital.repository.UserRepository;
@@ -32,21 +33,36 @@ public class DoctorService {
         return doctorRepository.findBySpecializationContainingIgnoreCase(specialization);
     }
 
-    public Doctor updateDoctor(Long id, Doctor updatedDoctor) {
+    public Doctor updateDoctor(
+            Long id,
+            DoctorUpdateRequestDTO updatedDoctor) {
+
         Doctor doctor = doctorRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Doctor not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("Doctor not found"));
+
         if (updatedDoctor.getSpecialization() != null)
             doctor.setSpecialization(updatedDoctor.getSpecialization());
+
         if (updatedDoctor.getQualification() != null)
             doctor.setQualification(updatedDoctor.getQualification());
+
+        if (updatedDoctor.getYearsOfExperience() != null)
+            doctor.setYearsOfExperience(
+                    updatedDoctor.getYearsOfExperience());
+
         if (updatedDoctor.getAvailableDays() != null)
             doctor.setAvailableDays(updatedDoctor.getAvailableDays());
+
         if (updatedDoctor.getAvailableTime() != null)
             doctor.setAvailableTime(updatedDoctor.getAvailableTime());
+
         if (updatedDoctor.getConsultationFee() != null)
             doctor.setConsultationFee(updatedDoctor.getConsultationFee());
+
         if (updatedDoctor.getPhoneNumber() != null)
             doctor.setPhoneNumber(updatedDoctor.getPhoneNumber());
+
         return doctorRepository.save(doctor);
     }
 
