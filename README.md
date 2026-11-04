@@ -1,4 +1,4 @@
-# 🏥 Hospital Management System
+# 🏥 Hospital Management & Patient Care Platform
 ### Java Full Stack + React + Google Gemini AI
 
 ---
