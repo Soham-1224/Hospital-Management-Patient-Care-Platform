@@ -1,7 +1,9 @@
 package com.hospital.controller;
 
+import com.hospital.dto.DoctorResponseDTO;
 import com.hospital.entity.Doctor;
 import com.hospital.service.DoctorService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,39 +18,49 @@ public class DoctorController {
     private DoctorService doctorService;
 
     @GetMapping
-    public ResponseEntity<List<Doctor>> getAllDoctors() {
-        return ResponseEntity.ok(doctorService.getAllDoctors());
+    public ResponseEntity<List<DoctorResponseDTO>> getAllDoctors() {
+
+        List<DoctorResponseDTO> doctors =
+                doctorService.getAllDoctors()
+                        .stream()
+                        .map(DoctorResponseDTO::fromEntity)
+                        .toList();
+
+        return ResponseEntity.ok(doctors);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getDoctorById(@PathVariable Long id) {
-        try {
-            return ResponseEntity.ok(doctorService.getDoctorById(id));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<DoctorResponseDTO> getDoctorById(
+            @PathVariable Long id) {
+
+        Doctor doctor = doctorService.getDoctorById(id);
+
+        return ResponseEntity.ok(
+                DoctorResponseDTO.fromEntity(doctor)
+        );
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getDoctorByUserId(@PathVariable Long userId) {
-        try {
-            return ResponseEntity.ok(doctorService.getDoctorByUserId(userId));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<DoctorResponseDTO> getDoctorByUserId(
+            @PathVariable Long userId) {
+
+        Doctor doctor = doctorService.getDoctorByUserId(userId);
+
+        return ResponseEntity.ok(
+                DoctorResponseDTO.fromEntity(doctor)
+        );
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<Doctor>> searchDoctors(@RequestParam String specialization) {
-        return ResponseEntity.ok(doctorService.getDoctorsBySpecialization(specialization));
-    }
+    public ResponseEntity<List<DoctorResponseDTO>> searchDoctors(
+            @RequestParam String specialization) {
 
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateDoctor(@PathVariable Long id, @RequestBody Doctor doctor) {
-        try {
-            return ResponseEntity.ok(doctorService.updateDoctor(id, doctor));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        List<DoctorResponseDTO> doctors =
+                doctorService.getDoctorsBySpecialization(specialization)
+                        .stream()
+                        .map(DoctorResponseDTO::fromEntity)
+                        .toList();
+
+        return ResponseEntity.ok(doctors);
     }
 }
