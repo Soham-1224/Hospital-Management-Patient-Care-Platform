@@ -1,73 +1,68 @@
 package com.hospital.service;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.http.MediaType;
-
-import java.util.List;
-import java.util.Map;
 
 @Service
 public class GeminiService {
 
-    @Value("${gemini.api.key}")
-    private String apiKey;
+    private final ChatClient chatClient;
 
-    @Value("${gemini.api.url}")
-    private String apiUrl;
-
-    private final WebClient webClient;
-
-    public GeminiService() {
-        this.webClient = WebClient.builder().build();
+    public GeminiService(ChatClient.Builder chatClientBuilder) {
+        this.chatClient = chatClientBuilder.build();
     }
 
     public String analyzeSymptoms(String symptoms) {
-        String prompt = """
-                You are a medical assistant AI in a hospital management system.
-                A patient is reporting the following symptoms: %s
-                
-                Please provide:
-                1. Possible conditions these symptoms may indicate (3-4 possibilities)
-                2. Recommended medical department to visit (e.g., Cardiology, Neurology, General Medicine, etc.)
-                3. Urgency level: LOW / MEDIUM / HIGH
-                4. General advice (do NOT provide specific medication or diagnosis)
-                
-                Format your response clearly with these 4 sections.
-                Add a disclaimer that this is AI-generated guidance and not a medical diagnosis.
+
+        String systemPrompt = """
+                You are a healthcare information assistant
+                integrated into a hospital management system.
+
+                Analyze the symptoms provided by the patient and
+                respond with the following four sections:
+
+                1. Possible Conditions:
+                   Mention 3-4 possible explanations, without
+                   claiming that any of them is a diagnosis.
+
+                2. Recommended Medical Department:
+                   Suggest an appropriate medical department
+                   such as General Medicine, Cardiology or Neurology.
+
+                3. Urgency Level:
+                   Classify the situation as LOW, MEDIUM or HIGH.
+                   Do not present this classification as a
+                   clinically verified assessment.
+
+                4. General Advice:
+                   Provide safe, general guidance.
+                   Do not prescribe medicines or specific dosages.
+
+                Important safety instructions:
+                - Never claim to provide a medical diagnosis.
+                - Clearly state that the response is AI-generated
+                  informational guidance.
+                - Recommend consultation with a qualified doctor.
+                - If symptoms suggest a potentially life-threatening
+                  emergency, advise immediate emergency medical care.
+                - Do not reassure a patient that serious symptoms
+                  are harmless.
+
                 Keep the response concise and easy to understand.
-                """.formatted(symptoms);
+                """;
 
-        Map<String, Object> requestBody = Map.of(
-            "contents", List.of(
-                Map.of("parts", List.of(Map.of("text", prompt)))
-            )
-        );
+        String analysis = chatClient.prompt()
+                .system(systemPrompt)
+                .user(symptoms)
+                .call()
+                .content();
 
-        try {
-            Map response = webClient.post()
-                    .uri(apiUrl + "?key=" + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(requestBody)
-                    .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
-
-            if (response != null && response.containsKey("candidates")) {
-                List candidates = (List) response.get("candidates");
-                if (!candidates.isEmpty()) {
-                    Map candidate = (Map) candidates.get(0);
-                    Map content = (Map) candidate.get("content");
-                    List parts = (List) content.get("parts");
-                    Map part = (Map) parts.get(0);
-                    return (String) part.get("text");
-                }
-            }
-        } catch (Exception e) {
-            return "AI service temporarily unavailable. Please consult with our medical staff directly. Error: " + e.getMessage();
+        if (analysis == null || analysis.isBlank()) {
+            throw new IllegalStateException(
+                    "The AI service returned an empty response"
+            );
         }
 
-        return "Unable to analyze symptoms at this time. Please consult with a doctor.";
+        return analysis;
     }
 }
