@@ -8,6 +8,8 @@ import com.hospital.service.DoctorService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -69,13 +71,23 @@ public class DoctorController {
     @PutMapping("/{id}")
     public ResponseEntity<DoctorResponseDTO> updateDoctor(
             @PathVariable Long id,
-            @Valid @RequestBody DoctorUpdateRequestDTO request) {
+            @Valid @RequestBody DoctorUpdateRequestDTO request,
+            Authentication authentication) {
 
-        Doctor updatedDoctor =
-                doctorService.updateDoctor(id, request);
-
-        return ResponseEntity.ok(
-                DoctorResponseDTO.fromEntity(updatedDoctor)
+        Doctor doctor = doctorService.updateDoctor(
+                id,
+                request,
+                authentication.getName(),
+                isAdmin(authentication)
         );
+
+        return ResponseEntity.ok(DoctorResponseDTO.fromEntity(doctor));
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_ADMIN"));
     }
 }

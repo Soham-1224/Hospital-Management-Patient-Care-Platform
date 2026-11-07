@@ -4,6 +4,7 @@ import com.hospital.security.JwtAuthFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -31,20 +32,40 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/doctor/**").hasAnyRole("DOCTOR", "ADMIN")
-                .requestMatchers("/api/patient/**").hasAnyRole("PATIENT", "ADMIN")
-                .requestMatchers("/api/ai/**").authenticated()
-                .requestMatchers("/api/appointments/**").authenticated()
-                .requestMatchers("/api/doctors/**").authenticated()
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/patients",
+                                "/api/patients/"
+                        ).hasRole("ADMIN")
+                        .requestMatchers("/api/patients/**").hasAnyRole("PATIENT", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/doctors/**").hasAnyRole("DOCTOR", "ADMIN")
+                        .requestMatchers("/api/doctors/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/appointments/all").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/appointments/patient/**").hasAnyRole("PATIENT", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/appointments/doctor/**").hasAnyRole("DOCTOR", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/appointments/book").hasAnyRole("PATIENT", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/appointments/*/notes").hasAnyRole("DOCTOR", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/appointments/*/status").hasAnyRole("DOCTOR", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/appointments/*/cancel").hasAnyRole("PATIENT", "ADMIN")
+                        .requestMatchers("/api/appointments/**").authenticated()
+                        .requestMatchers("/api/ai/**").authenticated()
+
+                        .anyRequest().authenticated()
+                )
+
+                .addFilterBefore(
+                        jwtAuthFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }

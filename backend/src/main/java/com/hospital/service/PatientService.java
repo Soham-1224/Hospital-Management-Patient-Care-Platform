@@ -5,7 +5,9 @@ import com.hospital.entity.Patient;
 import com.hospital.repository.PatientRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -19,20 +21,59 @@ public class PatientService {
         return patientRepository.findAll();
     }
 
-    public Patient getPatientById(Long id) {
-        return patientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
-    }
-
-    public Patient getPatientByUserId(Long userId) {
-        return patientRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Patient profile not found"));
-    }
-
-    public Patient updatePatient(Long id, PatientUpdateRequestDTO updatedPatient) {
+    public Patient getPatientById(
+            Long id,
+            String authenticatedEmail,
+            boolean isAdmin) {
 
         Patient patient = patientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Patient not found"
+                        )
+                );
+
+        verifyOwnership(patient, authenticatedEmail, isAdmin);
+
+        return patient;
+    }
+
+
+    public Patient getPatientByUserId(
+            Long userId,
+            String authenticatedEmail,
+            boolean isAdmin) {
+
+        Patient patient = patientRepository.findByUserId(userId)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Patient profile not found"
+                        )
+                );
+
+        verifyOwnership(patient, authenticatedEmail, isAdmin);
+
+        return patient;
+    }
+
+
+    public Patient updatePatient(
+            Long id,
+            PatientUpdateRequestDTO updatedPatient,
+            String authenticatedEmail,
+            boolean isAdmin) {
+
+        Patient patient = patientRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Patient not found"
+                        )
+                );
+
+        verifyOwnership(patient, authenticatedEmail, isAdmin);
 
         if (updatedPatient.getPhoneNumber() != null)
             patient.setPhoneNumber(updatedPatient.getPhoneNumber());
@@ -50,6 +91,24 @@ public class PatientService {
             patient.setMedicalHistory(updatedPatient.getMedicalHistory());
 
         return patientRepository.save(patient);
+    }
+
+
+    private void verifyOwnership(
+            Patient patient,
+            String authenticatedEmail,
+            boolean isAdmin) {
+
+        if (isAdmin) {
+            return;
+        }
+
+        if (!patient.getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not authorized to access this patient profile"
+            );
+        }
     }
 
     public long getTotalPatients() {

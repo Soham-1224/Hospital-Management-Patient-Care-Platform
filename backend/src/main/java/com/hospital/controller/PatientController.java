@@ -9,7 +9,10 @@ import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -32,47 +35,45 @@ public class PatientController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getPatientById(@PathVariable Long id) {
-        try {
-            Patient patient = patientService.getPatientById(id);
-
-            return ResponseEntity.ok(
-                    PatientResponseDTO.fromEntity(patient)
+    public ResponseEntity<?> getPatientById(@PathVariable Long id, Authentication authentication) {
+            Patient patient = patientService.getPatientById(
+                    id,
+                    authentication.getName(),
+                    isAdmin(authentication)
             );
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+            return ResponseEntity.ok(PatientResponseDTO.fromEntity(patient));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getPatientByUserId(@PathVariable Long userId) {
-        try {
-            Patient patient = patientService.getPatientByUserId(userId);
-
-            return ResponseEntity.ok(
-                    PatientResponseDTO.fromEntity(patient)
+    public ResponseEntity<?> getPatientByUserId(@PathVariable Long userId, Authentication authentication) {
+            Patient patient = patientService.getPatientByUserId(
+                    userId,
+                    authentication.getName(),
+                    isAdmin(authentication)
             );
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+            return ResponseEntity.ok(PatientResponseDTO.fromEntity(patient));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePatient(
             @PathVariable Long id,
-            @Valid @RequestBody PatientUpdateRequestDTO request) {
+            @Valid @RequestBody PatientUpdateRequestDTO request,
+            Authentication authentication) {
 
-        try {
-            Patient updatedPatient = patientService.updatePatient(id, request);
-
-            return ResponseEntity.ok(
-                    PatientResponseDTO.fromEntity(updatedPatient)
+            Patient patient = patientService.updatePatient(
+                    id,
+                    request,
+                    authentication.getName(),
+                    isAdmin(authentication)
             );
 
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+            return ResponseEntity.ok(PatientResponseDTO.fromEntity(patient));
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_ADMIN"));
     }
 }

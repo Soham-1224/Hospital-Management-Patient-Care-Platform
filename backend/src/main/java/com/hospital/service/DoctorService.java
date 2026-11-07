@@ -5,7 +5,9 @@ import com.hospital.entity.Doctor;
 import com.hospital.repository.DoctorRepository;
 import com.hospital.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -35,11 +37,19 @@ public class DoctorService {
 
     public Doctor updateDoctor(
             Long id,
-            DoctorUpdateRequestDTO updatedDoctor) {
+            DoctorUpdateRequestDTO updatedDoctor,
+            String authenticatedEmail,
+            boolean isAdmin) {
 
         Doctor doctor = doctorRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Doctor not found"));
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Doctor not found"
+                        )
+                );
+
+        verifyOwnership(doctor, authenticatedEmail, isAdmin);
 
         if (updatedDoctor.getSpecialization() != null)
             doctor.setSpecialization(updatedDoctor.getSpecialization());
@@ -64,6 +74,24 @@ public class DoctorService {
             doctor.setPhoneNumber(updatedDoctor.getPhoneNumber());
 
         return doctorRepository.save(doctor);
+    }
+
+
+    private void verifyOwnership(
+            Doctor doctor,
+            String authenticatedEmail,
+            boolean isAdmin) {
+
+        if (isAdmin) {
+            return;
+        }
+
+        if (!doctor.getUser().getEmail().equalsIgnoreCase(authenticatedEmail)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not authorized to update this doctor profile"
+            );
+        }
     }
 
     public long getTotalDoctors() {
