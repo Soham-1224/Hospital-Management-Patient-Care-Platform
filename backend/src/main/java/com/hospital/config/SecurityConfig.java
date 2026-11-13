@@ -58,6 +58,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/appointments/*/cancel").hasAnyRole("PATIENT", "ADMIN")
                         .requestMatchers("/api/appointments/**").authenticated()
                         .requestMatchers("/api/ai/**").authenticated()
+                        .requestMatchers("/error").permitAll()
 
                         .anyRequest().authenticated()
                 )

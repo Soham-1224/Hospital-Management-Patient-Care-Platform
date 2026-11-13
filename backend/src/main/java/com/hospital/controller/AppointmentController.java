@@ -13,6 +13,8 @@ import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,28 +29,25 @@ public class AppointmentController {
     // Book an appointment
     @PostMapping("/book")
     public ResponseEntity<?> bookAppointment(
-            @Valid @RequestBody AppointmentBookingRequestDTO request) {
+            @Valid @RequestBody AppointmentBookingRequestDTO request,
+            Authentication authentication) {
 
-        try {
             Appointment appointment =
-                    appointmentService.bookAppointment(request);
+                    appointmentService.bookAppointment(request, authentication.getName(), isAdmin(authentication));
 
             return ResponseEntity.ok(
                     AppointmentResponseDTO.fromEntity(appointment)
             );
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
     }
 
     // Get appointments by patient
     @GetMapping("/patient/{patientId}")
     public ResponseEntity<List<AppointmentResponseDTO>> getPatientAppointments(
-            @PathVariable Long patientId) {
+            @PathVariable Long patientId,
+            Authentication authentication) {
 
         List<AppointmentResponseDTO> appointments =
-                appointmentService.getAppointmentsByPatient(patientId)
+                appointmentService.getAppointmentsByPatient(patientId, authentication.getName(), isAdmin(authentication))
                         .stream()
                         .map(AppointmentResponseDTO::fromEntity)
                         .toList();
@@ -59,10 +58,11 @@ public class AppointmentController {
     // Get appointments by doctor
     @GetMapping("/doctor/{doctorId}")
     public ResponseEntity<List<AppointmentResponseDTO>> getDoctorAppointments(
-            @PathVariable Long doctorId) {
+            @PathVariable Long doctorId,
+            Authentication authentication) {
 
         List<AppointmentResponseDTO> appointments =
-                appointmentService.getAppointmentsByDoctor(doctorId)
+                appointmentService.getAppointmentsByDoctor(doctorId, authentication.getName(), isAdmin(authentication))
                         .stream()
                         .map(AppointmentResponseDTO::fromEntity)
                         .toList();
@@ -87,51 +87,45 @@ public class AppointmentController {
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(
             @PathVariable Long id,
-            @Valid @RequestBody AppointmentStatusUpdateDTO request) {
+            @Valid @RequestBody AppointmentStatusUpdateDTO request,
+            Authentication authentication) {
 
-        try {
             Appointment appointment =
-                    appointmentService.updateStatus(id, request);
+                    appointmentService.updateStatus(id, request, authentication.getName(), isAdmin(authentication));
 
             return ResponseEntity.ok(
                     AppointmentResponseDTO.fromEntity(appointment)
             );
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
     }
 
     // Add doctor's notes
     @PutMapping("/{id}/notes")
     public ResponseEntity<?> addNotes(
             @PathVariable Long id,
-            @Valid @RequestBody AppointmentNotesUpdateDTO request) {
+            @Valid @RequestBody AppointmentNotesUpdateDTO request,
+            Authentication authentication) {
 
-        try {
             Appointment appointment =
-                    appointmentService.addNotes(id, request);
+                    appointmentService.addNotes(id, request, authentication.getName(), isAdmin(authentication));
 
             return ResponseEntity.ok(
                     AppointmentResponseDTO.fromEntity(appointment)
             );
-
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
     }
 
     // Cancel appointment
     @DeleteMapping("/{id}/cancel")
-    public ResponseEntity<?> cancelAppointment(@PathVariable Long id) {
+    public ResponseEntity<?> cancelAppointment(@PathVariable Long id, Authentication authentication) {
 
-        try {
-            appointmentService.cancelAppointment(id);
+            appointmentService.cancelAppointment(id, authentication.getName(), isAdmin(authentication));
 
             return ResponseEntity.ok("Appointment cancelled");
+    }
 
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    private boolean isAdmin(Authentication authentication) {
+
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_ADMIN"));
     }
 }
